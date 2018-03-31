@@ -71,11 +71,12 @@ class DefaultProjectInstaller
     public void install( ProjectBuildingRequest buildingRequest, ProjectInstallerRequest installerRequest )
         throws IOException, ArtifactInstallerException, NoFileAssignedException, IllegalArgumentException
     {
+
         validateParameters( buildingRequest, installerRequest );
         MavenProject project = installerRequest.getProject();
-        boolean createChecksum = installerRequest.isCreateChecksum();
-        boolean updateReleaseInfo = installerRequest.isUpdateReleaseInfo();
 
+        boolean createChecksum = true;
+        
         Artifact artifact = project.getArtifact();
         String packaging = project.getPackaging();
         File pomFile = project.getFile();
@@ -86,11 +87,6 @@ class DefaultProjectInstaller
         boolean isPomArtifact = "pom".equals( packaging );
 
         ProjectArtifactMetadata metadata;
-
-        if ( updateReleaseInfo )
-        {
-            artifact.setRelease( true );
-        }
 
         Collection<File> metadataFiles = new LinkedHashSet<File>();
 

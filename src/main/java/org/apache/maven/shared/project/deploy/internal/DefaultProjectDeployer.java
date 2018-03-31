@@ -20,6 +20,7 @@ package org.apache.maven.shared.project.deploy.internal;
  */
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -35,6 +36,7 @@ import org.apache.maven.shared.project.deploy.ProjectDeployer;
 import org.apache.maven.shared.project.deploy.ProjectDeployerRequest;
 import org.codehaus.plexus.component.annotations.Component;
 import org.codehaus.plexus.component.annotations.Requirement;
+import org.codehaus.plexus.util.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,6 +55,8 @@ class DefaultProjectDeployer
     @Requirement
     private ArtifactDeployer deployer;
 
+    private final DualDigester digester = new DualDigester();
+
     /**
      * {@inheritDoc}
      */
@@ -60,6 +64,8 @@ class DefaultProjectDeployer
                         ArtifactRepository artifactRepository )
         throws NoFileAssignedException, IllegalArgumentException, ArtifactDeployerException
     {
+        boolean createChecksum = true;
+
         validateParameters( buildingRequest, projectDeployerRequest, artifactRepository );
 
         Artifact artifact = projectDeployerRequest.getProject().getArtifact();
@@ -80,13 +86,8 @@ class DefaultProjectDeployer
             artifact.addMetadata( metadata );
         }
 
-        // FIXME: It does not make sense to set an artifact explicitly to a "Release"
-        // cause this should be choosen only by the not existing of "-SNAPSHOT" in the
-        // version.
-        if ( projectDeployerRequest.isUpdateReleaseInfo() )
-        {
-            artifact.setRelease( true );
-        }
+        // What consequence does this have?
+        // artifact.setRelease( true );
 
         artifact.setRepository( artifactRepository );
 
@@ -103,6 +104,8 @@ class DefaultProjectDeployer
 
             if ( file != null && file.isFile() )
             {
+//                installChecksums( buildingRequest, artifact, createChecksum );
+                // ?
                 deployableArtifacts.add( artifact );
             }
             else if ( !attachedArtifacts.isEmpty() )
@@ -121,6 +124,7 @@ class DefaultProjectDeployer
 
         for ( Artifact attached : attachedArtifacts )
         {
+//            installChecksums( buildingRequest, artifact, createChecksum );
             deployableArtifacts.add( attached );
         }
 
@@ -183,6 +187,92 @@ class DefaultProjectDeployer
         if ( exception != null )
         {
             throw exception;
+        }
+    }
+
+    /**
+     * Installs the checksums for the specified artifact if this has been enabled in the plugin configuration. This
+     * method creates checksums for files that have already been installed to the local repo to account for on-the-fly
+     * generated/updated files. For example, in Maven 2.0.4- the <code>ProjectArtifactMetadata</code> did not install
+     * the original POM file (cf. MNG-2820). While the plugin currently requires Maven 2.0.6, we continue to hash the
+     * installed POM for robustness with regard to future changes like re-introducing some kind of POM filtering.
+     *
+     * @param buildingRequest The project building request, must not be <code>null</code>.
+     * @param artifact The artifact for which to create checksums, must not be <code>null</code>.
+     * @param createChecksum {@code true} if checksum should be created, otherwise {@code false}.
+     * @throws IOException If the checksums could not be installed.
+     */
+    private void installChecksums( ProjectBuildingRequest buildingRequest, Artifact artifact, boolean createChecksum )
+        throws IOException
+    {
+        if ( !createChecksum )
+        {
+            return;
+        }
+
+//        File artifactFile = getLocalRepoFile( buildingRequest, artifact );
+//        installChecksums( artifactFile );
+    }
+
+    /**
+     * Installs the checksums for the specified metadata files.
+     *
+     * @param metadataFiles The collection of metadata files to install checksums for, must not be <code>null</code>.
+     * @throws IOException If the checksums could not be installed.
+     */
+    private void installChecksums( Collection<File> metadataFiles )
+        throws IOException
+    {
+        for ( File metadataFile : metadataFiles )
+        {
+            installChecksums( metadataFile );
+        }
+    }
+
+    /**
+     * Installs the checksums for the specified file (if it exists).
+     *
+     * @param installedFile The path to the already installed file in the local repo for which to generate checksums,
+     *            must not be <code>null</code>.
+     * @throws IOException In case of errors. Could not install checksums.
+     */
+    private void installChecksums( File installedFile )
+        throws IOException
+    {
+        boolean signatureFile = installedFile.getName().endsWith( ".asc" );
+        if ( installedFile.isFile() && !signatureFile )
+        {
+            LOGGER.debug( "Calculating checksums for " + installedFile );
+            digester.calculate( installedFile );
+            installChecksum( installedFile, ".md5", digester.getMd5() );
+            installChecksum( installedFile, ".sha1", digester.getSha1() );
+        }
+    }
+
+    /**
+     * Installs a checksum for the specified file.
+     *
+     * @param installedFile The base path from which the path to the checksum files is derived by appending the given
+     *            file extension, must not be <code>null</code>.
+     * @param ext The file extension (including the leading dot) to use for the checksum file, must not be
+     *            <code>null</code>.
+     * @param checksum the checksum to write
+     * @throws IOException If the checksum could not be installed.
+     */
+    private void installChecksum( File installedFile, String ext, String checksum )
+        throws IOException
+    {
+        File checksumFile = new File( installedFile.getAbsolutePath() + ext );
+        LOGGER.debug( "Installing checksum to " + checksumFile );
+        try
+        {
+            // noinspection ResultOfMethodCallIgnored
+            checksumFile.getParentFile().mkdirs();
+            FileUtils.fileWrite( checksumFile.getAbsolutePath(), "UTF-8", checksum );
+        }
+        catch ( IOException e )
+        {
+            throw new IOException( "Failed to install checksum to " + checksumFile, e );
         }
     }
 

@@ -30,8 +30,6 @@ public class ProjectInstallerRequest
 
     private boolean createChecksum;
 
-    private boolean updateReleaseInfo;
-
     // From InstallMojo
 
     private MavenProject project;
@@ -51,24 +49,6 @@ public class ProjectInstallerRequest
     public ProjectInstallerRequest setCreateChecksum( boolean theCreateChecksumToBeSet )
     {
         this.createChecksum = theCreateChecksumToBeSet;
-        return this;
-    }
-
-    /**
-     * @return the updateReleaseInfo
-     */
-    public boolean isUpdateReleaseInfo()
-    {
-        return updateReleaseInfo;
-    }
-
-    /**
-     * @param theUpdateReleaseInfoToBeSet the updateReleaseInfo to set
-     * @return {@link ProjectInstallerRequest} for chaining.
-     */
-    public ProjectInstallerRequest setUpdateReleaseInfo( boolean theUpdateReleaseInfoToBeSet )
-    {
-        this.updateReleaseInfo = theUpdateReleaseInfoToBeSet;
         return this;
     }
 
