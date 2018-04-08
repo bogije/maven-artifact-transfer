@@ -106,8 +106,8 @@ public class ProjectInstallerTest
     {
         File jarClassifierFile = new File( baseDirectoy, "maven-project-installer-plugin-it-1.0.0-A-classifier.jar" );
         assertTrue( "jarClassifierFile '" + jarClassifierFile.getAbsolutePath() + "'", jarClassifierFile.exists() );
-        assertTrue( "jarClassifier md5 not found.", new File( jarClassifierFile.getAbsolutePath() + ".md5" ).exists() );
-        assertTrue( "jarClassifier sha1 not found.",
+        assertFalse( "jarClassifier md5 not found.", new File( jarClassifierFile.getAbsolutePath() + ".md5" ).exists() );
+        assertFalse( "jarClassifier sha1 not found.",
                     new File( jarClassifierFile.getAbsolutePath() + ".sha1" ).exists() );
     }
 
@@ -115,15 +115,15 @@ public class ProjectInstallerTest
     {
         File jarFile = new File( baseDirectoy, "maven-project-installer-plugin-it-1.0.0-A.jar" );
         assertTrue( "jarFile '" + jarFile.getAbsolutePath() + "'", jarFile.exists() );
-        assertTrue( "jar md5 not found.", new File( jarFile.getAbsolutePath() + ".md5" ).exists() );
-        assertTrue( "jar sha1 not found.", new File( jarFile.getAbsolutePath() + ".sha1" ).exists() );
+        assertFalse( "jar md5 not found.", new File( jarFile.getAbsolutePath() + ".md5" ).exists() );
+        assertFalse( "jar sha1 not found.", new File( jarFile.getAbsolutePath() + ".sha1" ).exists() );
     }
 
     private void checkForPomFile( File baseDirectoy )
     {
         File pomFile = new File( baseDirectoy, "maven-project-installer-plugin-it-1.0.0-A.pom" );
         assertTrue( "pomFile '" + pomFile.getAbsolutePath() + "'", pomFile.exists() );
-        assertTrue( "pom md5 not found.", new File( pomFile.getAbsolutePath() + ".md5" ).exists() );
-        assertTrue( "pom sha1 not found.", new File( pomFile.getAbsolutePath() + ".sha1" ).exists() );
+        assertFalse( "pom md5 not found.", new File( pomFile.getAbsolutePath() + ".md5" ).exists() );
+        assertFalse( "pom sha1 not found.", new File( pomFile.getAbsolutePath() + ".sha1" ).exists() );
     }
 }
