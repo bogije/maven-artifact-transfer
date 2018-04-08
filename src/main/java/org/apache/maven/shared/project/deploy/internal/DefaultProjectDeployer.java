@@ -69,8 +69,6 @@ class DefaultProjectDeployer
                         ArtifactRepository artifactRepository )
         throws NoFileAssignedException, IllegalArgumentException, ArtifactDeployerException
     {
-        boolean createChecksum = true;
-
         validateParameters( buildingRequest, projectDeployerRequest, artifactRepository );
 
         Artifact artifact = projectDeployerRequest.getProject().getArtifact();
