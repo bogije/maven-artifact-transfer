@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.metadata.ArtifactMetadata;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.project.ProjectBuildingRequest;
 import org.apache.maven.project.artifact.ProjectArtifactMetadata;
@@ -34,6 +35,7 @@ import org.apache.maven.shared.artifact.deploy.ArtifactDeployerException;
 import org.apache.maven.shared.project.NoFileAssignedException;
 import org.apache.maven.shared.project.deploy.ProjectDeployer;
 import org.apache.maven.shared.project.deploy.ProjectDeployerRequest;
+import org.apache.maven.shared.repository.RepositoryManager;
 import org.codehaus.plexus.component.annotations.Component;
 import org.codehaus.plexus.component.annotations.Requirement;
 import org.codehaus.plexus.util.FileUtils;
@@ -54,6 +56,9 @@ class DefaultProjectDeployer
 
     @Requirement
     private ArtifactDeployer deployer;
+
+    @Requirement
+    private RepositoryManager repositoryManager;
 
     private final DualDigester digester = new DualDigester();
 
@@ -104,9 +109,8 @@ class DefaultProjectDeployer
 
             if ( file != null && file.isFile() )
             {
-//                installChecksums( buildingRequest, artifact, createChecksum );
-                // ?
                 deployableArtifacts.add( artifact );
+                // installChecksums( buildingRequest, artifact, createChecksum );
             }
             else if ( !attachedArtifacts.isEmpty() )
             {
@@ -124,10 +128,11 @@ class DefaultProjectDeployer
 
         for ( Artifact attached : attachedArtifacts )
         {
-//            installChecksums( buildingRequest, artifact, createChecksum );
+            // installChecksums( buildingRequest, artifact, createChecksum );
             deployableArtifacts.add( attached );
         }
 
+        installChecksumsForAllArtifacts( buildingRequest, deployableArtifacts );
         deploy( buildingRequest, deployableArtifacts, artifactRepository, retryFailedDeploymentCount );
     }
 
@@ -146,6 +151,22 @@ class DefaultProjectDeployer
         if ( artifactRepository == null )
         {
             throw new IllegalArgumentException( "The parameter artifactRepository is not allowed to be null." );
+        }
+    }
+
+    private void installChecksumsForAllArtifacts( ProjectBuildingRequest request, Collection<Artifact> artifacts )
+    {
+        for ( Artifact item : artifacts )
+        {
+            try
+            {
+                installChecksums( request, item );
+            }
+            catch ( IOException e )
+            {
+                // THINK HARD ABOUT IT
+                LOGGER.error( "Failure during checksum generation for " + item.getId() );
+            }
         }
     }
 
@@ -191,27 +212,16 @@ class DefaultProjectDeployer
     }
 
     /**
-     * Installs the checksums for the specified artifact if this has been enabled in the plugin configuration. This
-     * method creates checksums for files that have already been installed to the local repo to account for on-the-fly
-     * generated/updated files. For example, in Maven 2.0.4- the <code>ProjectArtifactMetadata</code> did not install
-     * the original POM file (cf. MNG-2820). While the plugin currently requires Maven 2.0.6, we continue to hash the
-     * installed POM for robustness with regard to future changes like re-introducing some kind of POM filtering.
-     *
      * @param buildingRequest The project building request, must not be <code>null</code>.
      * @param artifact The artifact for which to create checksums, must not be <code>null</code>.
      * @param createChecksum {@code true} if checksum should be created, otherwise {@code false}.
      * @throws IOException If the checksums could not be installed.
      */
-    private void installChecksums( ProjectBuildingRequest buildingRequest, Artifact artifact, boolean createChecksum )
+    private void installChecksums( ProjectBuildingRequest buildingRequest, Artifact artifact )
         throws IOException
     {
-        if ( !createChecksum )
-        {
-            return;
-        }
-
-//        File artifactFile = getLocalRepoFile( buildingRequest, artifact );
-//        installChecksums( artifactFile );
+        File artifactFile = getLocalRepoFile( buildingRequest, artifact );
+        installChecksums( artifactFile );
     }
 
     /**
@@ -274,6 +284,34 @@ class DefaultProjectDeployer
         {
             throw new IOException( "Failed to install checksum to " + checksumFile, e );
         }
+    }
+
+    /**
+     * Gets the path of the specified artifact within the local repository. Note that the returned path need not exist
+     * (yet).
+     *
+     * @param buildingRequest The project building request, must not be <code>null</code>.
+     * @param artifact The artifact whose local repo path should be determined, must not be <code>null</code>.
+     * @return The absolute path to the artifact when installed, never <code>null</code>.
+     */
+    private File getLocalRepoFile( ProjectBuildingRequest buildingRequest, Artifact artifact )
+    {
+        String path = repositoryManager.getPathForLocalArtifact( buildingRequest, artifact );
+        return new File( repositoryManager.getLocalRepositoryBasedir( buildingRequest ), path );
+    }
+
+    /**
+     * Gets the path of the specified artifact metadata within the local repository. Note that the returned path need
+     * not exist (yet).
+     *
+     * @param buildingRequest The project building request, must not be <code>null</code>.
+     * @param metadata The artifact metadata whose local repo path should be determined, must not be <code>null</code>.
+     * @return The absolute path to the artifact metadata when installed, never <code>null</code>.
+     */
+    private File getLocalRepoFile( ProjectBuildingRequest buildingRequest, ArtifactMetadata metadata )
+    {
+        String path = repositoryManager.getPathForLocalMetadata( buildingRequest, metadata );
+        return new File( repositoryManager.getLocalRepositoryBasedir( buildingRequest ), path );
     }
 
 }
